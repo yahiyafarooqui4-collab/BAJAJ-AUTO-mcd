@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BAJAJ AUTO LTD. — Production Planner (Advanced)</title>
+<style>
+:root{
+  --bg:#f5f8ff; --card:#ffffff; --text:#0b2340; --accent:#0033cc; --accent-2:#00aaff;
+  --muted:#6b7280; --success:#28a745; --danger:#dc3545;
+}
+body.dark{ --bg:#0b1220; --card:#0f1724; --text:#e6eef8; --accent:#0d6efd; --accent-2:#17a2b8; --muted:#9aa6b2; }
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+.header{padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;background:transparent;backdrop-filter:blur(6px);z-index:5}
+.logo{width:48px;height:40px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+.title{flex:1}
+.container{max-width:980px;margin:18px auto;padding:12px}
+.card{background:var(--card);border-radius:12px;padding:12px;margin-bottom:14px;box-shadow:0 6px 20px rgba(11,35,64,0.06)}
+.controls{display:flex;flex-wrap:wrap;gap:8px}
+button{border:0;padding:10px 12px;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;font-weight:600}
+button.secondary{background:#6c757d}
+button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(3,102,214,0.12)}
+.small{padding:8px 10px;font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 360px;gap:12px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.table-wrap{overflow:auto;border-radius:8px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid rgba(11,35,64,0.06);text-align:center;font-size:14px}
+th{background:linear-gradient(90deg,rgba(3,102,214,0.05),transparent);font-weight:700}
+input[type=number],input[type=text]{width:80px;padding:8px;border-radius:6px;border:1px solid rgba(11,35,64,0.08);text-align:center}
+.row-flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.live-total{background:var(--accent-2);color:#fff;padding:10px;border-radius:8px;font-weight:700;text-align:center}
+#outputBox{white-space:pre-wrap;font-family:monospace;padding:12px;background:linear-gradient(180deg,rgba(0,0,0,0.02),transparent);border-radius:8px;min-height:160px}
+.toast{position:fixed;right:16px;bottom:16px;padding:12px 14px;border-radius:8px;background:#222;color:#fff;opacity:0;transform:translateY(10px);transition:all .28s}
+.toast.show{opacity:1;transform:translateY(0)}
+.footer{font-size:13px;color:var(--muted);text-align:center;padding:8px}
+.switch{display:inline-flex;align-items:center;gap:8px;padding:6px 8px;border-radius:999px;background:rgba(0,0,0,0.03)}
+.search{padding:8px;border-radius:8px;border:1px solid rgba(11,35,64,0.06)}
+.history-list{max-height:260px;overflow:auto;padding:6px;border-radius:8px;border:1px dashed rgba(11,35,64,0.06)}
+.small-muted{font-size:13px;color:var(--muted)}
+.header h1{margin:0;font-size:16px}
+.footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<div class="header card" style="margin:8px">
+  <div class="logo">BAJ</div>
+  <div class="title">
+    <h1>BAJAJ AUTO LTD. — Production Planner (Advanced)</h1>
+    <div class="small-muted">Mobile-first • Offline-ready • Future-ready</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <div class="switch" title="Toggle theme"><label style="cursor:pointer"><input id="themeToggle" type="checkbox" style="display:none"></label><span id="themeLabel" class="small-muted">Light</span></div>
+    <button class="small" onclick="login()" title="Admin Login">Login</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="card grid">
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="row-flex">
+          <div class="small-muted">Company:</div>
+          <strong>BAJAJ AUTO LTD.</strong>
+        </div>
+        <div class="row-flex">
+          <div id="lastUpdated" class="small-muted">Last Updated: —</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="row-flex">
+            <button onclick="calculate()">Calculate</button>
+            <button class="secondary small" onclick="playSound()" title="Play sound">Test Sound</button>
+            <button class="ghost small" onclick="cloudBackup()">Cloud Backup</button>
+            <button class="ghost small" onclick="cloudRestore()">Cloud Restore</button>
+          </div>
+          <div id="liveTotalBox" class="live-total">Live Total: 0</div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Product</th><th>1st</th><th>2nd</th><th>OK</th></tr></thead>
+            <tbody id="prodRows">
+              <!-- rows generated by JS -->
+            </tbody>
+            <tfoot>
+              <tr><th>Total</th><th id="sum1">0</th><th id="sum2">0</th><th id="sumOk">0</th></tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <input id="ca1" type="number" placeholder="Conv A 1st" value="0">
+          <input id="ca2" type="number" placeholder="Conv A 2nd" value="0">
+          <input id="cb" type="number" placeholder="Conv B" value="0">
+          <input id="skd" type="number" placeholder="SKD" value="0">
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="copyOutput()" style="background:#28a745">Copy Output</button>
+          <button onclick="downloadText()" class="secondary">Download TXT</button>
+          <button onclick="exportExcel()" style="background:#ff8800">Export Excel</button>
+          <button onclick="exportPDF()" style="background:#d63384">Export PDF</button>
+          <button onclick="exportImage()" style="background:#17a2b8">Export PNG</button>
+          <button onclick="generateQR()" style="background:#6f42c1">Generate QR</button>
+          <button onclick="importFromQRText()" class="ghost">Import from QR Text</button>
+          <button onclick="exportData()" class="secondary">Copy JSON</button>
+          <label style="display:inline-block" class="ghost small">Import JSON <input type="file" onchange="importFile(event)" style="display:inline-block;margin-left:8px"></label>
+        </div>
+        <div style="margin-top:10px">
+          <div id="outputBox"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>History</strong>
+          <div class="small-muted">Auto saves — LRU 100</div>
+        </div>
+        <div style="margin-top:8px">
+          <div class="row-flex" style="margin-bottom:8px">
+            <input id="searchHistory" class="search" placeholder="Search history..." oninput="renderHistory()">
+            <button class="small" onclick="saveSnapshot()">Save Now</button>
+            <button class="small secondary" onclick="clearHistory()">Clear All</button>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <strong>QR Preview</strong>
+        <div id="qrPreview" style="text-align:center;margin-top:8px"></div>
+        <div style="margin-top:8px" class="small-muted">Tip: Use 'Generate QR' then scan with your phone to share data.</div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <strong>Settings</strong>
+        <div style="margin-top:8px" class="small-muted">
+          <div style="margin-top:6px">
+            <label>Theme: <select id="themeSelect" onchange="applyTheme()"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">Auto</option></select></label>
+          </div>
+          <div style="margin-top:8px">
+            <label>Sound: <input type="checkbox" id="soundToggle" checked></label>
+          </div>
+          <div style="margin-top:8px">
+            <label>Max History: <input id="maxHistory" type="number" value="100" style="width:80px"></label>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>How to Use</h3>
+    <ol>
+      <li>Enter production numbers for each product and shifts.</li>
+      <li>Click <strong>Calculate</strong> — totals will auto-update and save to history.</li>
+      <li>Use exports (Excel/PDF/PNG/TXT) or copy to WhatsApp.</li>
+      <li>Generate QR to share data; use 'Import from QR Text' to paste QR JSON.</li>
+      <li>Use History to restore previous snapshots.</li>
+    </ol>
+  </div>
+
+  <div class="footer card">
+    © 2025 BAJAJ AUTO LTD. — Production Planner • Built for mobile • Future-ready
+  </div>
+</div>
+
+<div id="toast" class="toast">Saved</div>
+
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+/* ========== Data Model ========== */
+const PRODUCTS = ["Freedom","CT110NXT","PL100NXT","PL110NXT","K19 A (N)","K19 A (H)","K19 C"];
+const STATE = {rows:{}, history:[], maxHistory:100};
+
+/* ========== Utilities ========== */
+function showToast(msg, t=2000){
+  const el=document.getElementById('toast'); el.innerText=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), t);
+}
+function now(){ return new Date().toLocaleString(); }
+function uid(n=6){ return Math.random().toString(36).slice(2,2+n); }
+
+/* ========== Init UI ========== */
+function buildRows(){
+  const tbody = document.getElementById('prodRows'); tbody.innerHTML='';
+  PRODUCTS.forEach(p=>{
+    const tr=document.createElement('tr');
+    const tdName=document.createElement('td'); tdName.innerText=p;
+    const td1=document.createElement('td'); const in1=document.createElement('input'); in1.type='number'; in1.value=0; in1.id = p+'_1'; in1.oninput=onInputChange; in1.style.width='72px';
+    const td2=document.createElement('td'); const in2=document.createElement('input'); in2.type='number'; in2.value=0; in2.id = p+'_2'; in2.oninput=onInputChange; in2.style.width='72px';
+    const tdOk=document.createElement('td'); tdOk.id = p+'_ok'; tdOk.innerText='0';
+    td1.addEventListener('focus',(e)=>e.target.select()); td2.addEventListener('focus',(e)=>e.target.select());
+    td1.onblur = updateLiveTotals; td2.onblur = updateLiveTotals;
+    td1.className='inp'; td2.className='inp';
+    td1.style.textAlign='center'; td2.style.textAlign='center';
+    td1.placeholder='0'; td2.placeholder='0';
+    td1.setAttribute('inputmode','numeric'); td2.setAttribute('inputmode','numeric');
+    td1.addEventListener('keyup',()=>autoSaveDraft());
+    td2.addEventListener('keyup',()=>autoSaveDraft());
+    td1.addEventListener('change',()=>autoSaveDraft()); td2.addEventListener('change',()=>autoSaveDraft());
+    td1.addEventListener('input',()=>calculateSilent());
+    td2.addEventListener('input',()=>calculateSilent());
+    td1.style.width='84px'; td2.style.width='84px';
+    td1.style.borderRadius='6px'; td2.style.borderRadius='6px';
+    td1.style.border='1px solid rgba(0,0,0,0.06)'; td2.style.border='1px solid rgba(0,0,0,0.06)';
+    td1.style.padding='6px'; td2.style.padding='6px';
+    td1.style.boxSizing='border-box'; td2.style.boxSizing='border-box';
+    td1.style.fontSize='14px'; td2.style.fontSize='14px';
+    td1.style.textAlign='center'; td2.style.textAlign='center';
+    td1.addEventListener('input',()=>updateOk(p));
+    td2.addEventListener('input',()=>updateOk(p));
+    tdOk.style.fontWeight='600';
+    tdOk.style.color='var(--muted)';
+    tdOk.style.textAlign='center';
+    tdOk.style.minWidth='56px';
+    tdOk.style.padding='8px';
+    tdOk.style.background='transparent';
+    tdOk.style.borderRadius='6px';
+    tdOk.style.display='inline-block';
+    tdOk.style.fontSize='14px';
+    tdOk.style.boxSizing='border-box';
+    tdOk.style.width='84px';
+    tdOk.style.border='0';
+    tdOk.style.color='var(--text)';
+    tdOk.style.fontFamily='monospace';
+    tr.appendChild(tdName);
+    td1.appendChild(in1); td2.appendChild(in2);
+    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(tdOk);
+    tbody.appendChild(tr);
+  });
+}
+buildRows();
+
+/* ========== Calculation Logic ========== */
+function getVal(id){ const el=document.getElementById(id); return el ? Number(el.value)||0 : 0; }
+function updateOk(product){ const okEl=document.getElementById(product+'_ok'); const a=getVal(product+'_1'); const b=getVal(product+'_2'); okEl.innerText = (a+b); calculateSilent(); }
+function calculateSilent(){ // runs on input but doesn't play sound/save
+  let sum1=0,sum2=0,sumOk=0;
+  PRODUCTS.forEach(p=>{ const a=getVal(p+'_1'); const b=getVal(p+'_2'); const ok=a+b; sum1+=a; sum2+=b; sumOk+=ok; document.getElementById(p+'_ok').innerText=ok; });
+  document.getElementById('sum1').innerText=sum1; document.getElementById('sum2').innerText=sum2; document.getElementById('sumOk').innerText=sumOk;
+  document.getElementById('liveTotalBox').innerText = 'Live Total: ' + (sum1+sum2);
+}
+function calculate(){
+  calculateSilent();
+  // build output
+  const dt = new Date(); const dateStr = [String(dt.getDate()).padStart(2,'0'),String(dt.getMonth()+1).padStart(2,'0'),dt.getFullYear()].join('/');
+  const ca1 = getVal('ca1'), ca2=getVal('ca2'), cb=getVal('cb'), skd=getVal('skd');
+  let out = 'Date: ' + dateStr + '\nBAJAJ AUTO LTD.\nSir,\n\nDomestic | 1st | 2nd | OK\n';
+  let total1=0,total2=0,totalOk=0;
+  PRODUCTS.forEach(p=>{ const a=getVal(p+'_1'), b=getVal(p+'_2'), ok=a+b; out += p + ' — ' + a + ' — ' + b + ' — ' + ok + '\n'; total1+=a; total2+=b; totalOk+=ok; });
+  const totalOffline = totalOk + skd;
+  out += '-----------------------------------\n';
+  out += 'Total:  ' + total1 + '  ' + total2 + '  ' + totalOk + '\n\n';
+  out += 'Conv A 1st: ' + ca1 + '\nConv A 2nd: ' + ca2 + '\nConv B: ' + cb + '\nSKD: ' + skd + '\n\n';
+  out += 'Total Offline: ' + totalOffline;
+  document.getElementById('outputBox').innerText = out;
+  // update footer & history
+  document.getElementById('lastUpdated').innerText = 'Last Updated: ' + now();
+  saveToHistory({id: uid(8), timestamp: (new Date()).toISOString(), data: snapshotInputs(), output: out});
+  if(document.getElementById('soundToggle').checked) playSound();
+}
+
+/* ========== Snapshot / History LRU ========== */
+function snapshotInputs(){
+  const data = {};
+  PRODUCTS.forEach(p=>{ data[p+'_1']=getVal(p+'_1'); data[p+'_2']=getVal(p+'_2'); });
+  data.ca1=getVal('ca1'); data.ca2=getVal('ca2'); data.cb=getVal('cb'); data.skd=getVal('skd');
+  data.company='BAJAJ AUTO LTD.'; data.date=new Date().toISOString();
+  return data;
+}
+function saveToHistory(item){
+  const max = Number(document.getElementById('maxHistory').value) || 100;
+  let hist = JSON.parse(localStorage.getItem('planner_history')||'[]');
+  hist.unshift(item); // newest first
+  hist = hist.filter((v,i,self)=> i===self.findIndex(t=>t.id===v.id)).slice(0,max);
+  localStorage.setItem('planner_history', JSON.stringify(hist));
+  renderHistory();
+  showToast('Saved to history');
+}
+function saveSnapshot(){ const data=snapshotInputs(); const out=document.getElementById('outputBox').innerText; saveToHistory({id:uid(8),timestamp:new Date().toISOString(),data:data,output:out}); }
+function renderHistory(){
+  const list = document.getElementById('historyList'); list.innerHTML='';
+  const q = document.getElementById('searchHistory').value.trim().toLowerCase();
+  let hist = JSON.parse(localStorage.getItem('planner_history')||'[]');
+  hist.forEach(h=>{
+    if(q && !JSON.stringify(h).toLowerCase().includes(q)) return;
+    const div=document.createElement('div'); div.style.padding='8px'; div.style.borderBottom='1px solid rgba(0,0,0,0.04)';
+    const t=document.createElement('div'); t.innerHTML='<div style="font-weight:600">'+(new Date(h.timestamp)).toLocaleString()+'</div><div class="small-muted" style="font-size:12px">'+h.id+'</div>';
+    const btns=document.createElement('div'); btns.style.marginTop='6px';
+    const r=document.createElement('button'); r.className='small'; r.innerText='Restore'; r.onclick=()=>{ restoreFromHistory(h); };
+    const d=document.createElement('button'); d.className='small secondary'; d.style.marginLeft='6px'; d.innerText='Delete'; d.onclick=()=>{ deleteHistory(h.id); };
+    btns.appendChild(r); btns.appendChild(d);
+    div.appendChild(t); div.appendChild(btns); list.appendChild(div);
+  });
+}
+function restoreFromHistory(h){
+  if(!h || !h.data) return;
+  const d=h.data;
+  PRODUCTS.forEach(p=>{ if(d[p+'_1']!==undefined) document.getElementById(p+'_1').value = d[p+'_1']; if(d[p+'_2']!==undefined) document.getElementById(p+'_2').value = d[p+'_2']; updateOk(p); });
+  document.getElementById('ca1').value=d.ca1||0; document.getElementById('ca2').value=d.ca2||0; document.getElementById('cb').value=d.cb||0; document.getElementById('skd').value=d.skd||0;
+  calculate();
+  showToast('Restored from history');
+}
+function deleteHistory(id){
+  let hist = JSON.parse(localStorage.getItem('planner_history')||'[]'); hist = hist.filter(h=>h.id !== id); localStorage.setItem('planner_history', JSON.stringify(hist)); renderHistory(); showToast('Deleted');
+}
+function clearHistory(){ localStorage.removeItem('planner_history'); renderHistory(); showToast('Cleared history'); }
+renderHistory();
+
+/* ========== Export / Import ========== */
+function copyOutput(){ navigator.clipboard.writeText(document.getElementById('outputBox').innerText); showToast('Copied to clipboard'); }
+function downloadText(){ const t=document.getElementById('outputBox').innerText; const b=new Blob([t],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='Production_Plan.txt'; a.click(); }
+function exportExcel(){ const out = document.getElementById('outputBox').innerText; const csv = out.split('\n').map(r=>r.replace(/\s+—\s+/g,',').replace(/\s+\|\s+/g,',')).join('\n'); const b=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='Production_Plan.csv'; a.click(); showToast('Excel (CSV) ready'); }
+function exportPDF(){ const content = document.getElementById('outputBox').innerText; const win = window.open('','PDF','height=700,width=700'); win.document.write('<pre style="font-size:14px;font-family:Arial">'+content+'</pre>'); win.print(); showToast('Opened print dialog for PDF'); }
+function exportImage(){ html2canvas(document.querySelector('#outputBox')).then(canvas=>{ const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='ProductionPlan.png'; a.click(); showToast('PNG exported'); }); }
+function exportData(){ const data = snapshotInputs(); navigator.clipboard.writeText(JSON.stringify(data)); showToast('Data JSON copied'); }
+function importFile(ev){ const file = ev.target.files[0]; if(!file) return; const reader=new FileReader(); reader.onload=()=>{ try{ const obj=JSON.parse(reader.result); applyImported(obj); showToast('File imported'); }catch(e){ alert('Invalid JSON file'); } }; reader.readAsText(file); }
+function applyImported(obj){ PRODUCTS.forEach(p=>{ if(obj[p+'_1']!==undefined) document.getElementById(p+'_1').value = obj[p+'_1']; if(obj[p+'_2']!==undefined) document.getElementById(p+'_2').value = obj[p+'_2']; updateOk(p); }); document.getElementById('ca1').value = obj.ca1||0; document.getElementById('ca2').value=obj.ca2||0; document.getElementById('cb').value=obj.cb||0; document.getElementById('skd').value=obj.skd||0; calculate(); }
+
+/* ========== QR ========== */
+function generateQR(){ const text = document.getElementById('outputBox').innerText; const url = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='+encodeURIComponent(text); document.getElementById('qrPreview').innerHTML = '<img src="'+url+'" alt="QR">'; showToast('QR generated'); }
+function importFromQRText(){ const txt = prompt('Paste JSON text from QR (or raw output text)'); if(!txt) return; try{ const obj = JSON.parse(txt); applyImported(obj); }catch(e){ document.getElementById('outputBox').innerText = txt; showToast('Imported raw text into output'); } }
+
+/* ========== Sound & Vibration ========== */
+function playSound(){ if(!document.getElementById('soundToggle').checked) return; try{ const a=new Audio('https://cdn.pixabay.com/audio/2021/08/04/audio_5b3d38de49.mp3'); a.play(); }catch(e){} try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){} }
+
+/* ========== Live Totals & Auto-save ========== */
+function onInputChange(){ updateLiveTotals(); }
+function updateLiveTotals(){ let t=0; PRODUCTS.forEach(p=>{ t += getVal(p+'_1') + getVal(p+'_2'); }); document.getElementById('liveTotalBox').innerText = 'Live Total: ' + t; document.getElementById('sum1').innerText = PRODUCTS.reduce((s,p)=>s+getVal(p+'_1'),0); document.getElementById('sum2').innerText = PRODUCTS.reduce((s,p)=>s+getVal(p+'_2'),0); document.getElementById('sumOk').innerText = PRODUCTS.reduce((s,p)=>s+(getVal(p+'_1')+getVal(p+'_2')),0); }
+function autoSaveDraft(){ const draft = snapshotInputs(); localStorage.setItem('planner_draft', JSON.stringify(draft)); }
+
+/* ========== Login Placeholder ========== */
+function login(){ const u=prompt('Username'); const p=prompt('Password'); if(u==='admin' && p==='1234'){ alert('Admin login OK'); } else alert('Invalid'); }
+
+/* ========== Cloud placeholders ========== */
+function saveToCloud(){ showToast('saveToCloud() placeholder'); }
+function loadFromCloud(){ showToast('loadFromCloud() placeholder'); }
+function cloudBackup(){ localStorage.setItem('planner_cloudsim', document.getElementById('outputBox').innerText); showToast('Cloud-sim backup saved'); }
+function cloudRestore(){ const c=localStorage.getItem('planner_cloudsim'); if(c){ document.getElementById('outputBox').innerText=c; showToast('Cloud-sim restored'); } else showToast('No cloud backup found'); }
+
+/* ========== Theme ========== */
+function applyTheme(){ const v=document.getElementById('themeSelect').value; if(v==='dark'){ document.documentElement.classList.add('dark'); document.getElementById('themeLabel').innerText='Dark'; } else if(v==='light'){ document.documentElement.classList.remove('dark'); document.getElementById('themeLabel').innerText='Light'; } else { const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches; if(dark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); document.getElementById('themeLabel').innerText = dark ? 'Dark' : 'Light'; } }
+document.getElementById('themeSelect').value='light'; applyTheme();
+document.getElementById('themeToggle').addEventListener('change',()=>{ const t=document.getElementById('themeToggle').checked; document.getElementById('themeSelect').value = t ? 'dark' : 'light'; applyTheme(); });
+
+/* ========== Init load draft if any ========== */
+(function init(){ buildRows(); const draft = JSON.parse(localStorage.getItem('planner_draft') || 'null'); if(draft){ applyImported(draft); showToast('Draft loaded'); } calculateSilent(); renderHistory(); })();
+
+/* ========== Export/Import helpers ========== */
+function importFromText(){ const txt = prompt('Paste exported JSON/text'); if(!txt) return; try{ const obj=JSON.parse(txt); applyImported(obj); }catch(e){ document.getElementById('outputBox').innerText = txt; } }
+
+</script>
+</body>
+</html>
